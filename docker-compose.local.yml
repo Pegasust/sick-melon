@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+version: "3"
+services:
+  mysql:
+    image: mysql:8.0.31
+    restart: unless-stopped
+    env_file: 
+    - ./mysql.env
+    ports:
+    - 3306:3306
+    volumes:
+    - db:/var/lib/mysql
+
+volumes:
+  db:
+
+
