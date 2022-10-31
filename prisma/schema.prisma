@@ -2,22 +2,18 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["referentialIntegrity"]
 }
 
 datasource db {
-  provider = "mysql"
+  provider             = "mysql"
   // NOTE: When using postgresql, mysql or sqlserver, uncomment the @db.Text annotations in model Account below
   // Further reading:
   // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
   // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
-  url      = env("DATABASE_URL")
-}
-
-model Example {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  url                  = env("DATABASE_URL")
+  referentialIntegrity = "prisma"
 }
 
 // Necessary for Next auth
@@ -48,13 +44,15 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
+  id             String            @id @default(cuid())
+  name           String?
+  email          String?           @unique
+  emailVerified  DateTime?
+  image          String?
+  accounts       Account[]
+  sessions       Session[]
+  MovieReview    MovieReview[]
+  AssociateRevie AssociateReview[]
 }
 
 model VerificationToken {
@@ -63,4 +61,163 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ---- Scalar models ----
+model Movie {
+  id             String    @id @default(cuid())
+  primaryTitle   String
+  originalTitle  String
+  brief          String?
+  // PG-13,...
+  rating         String?
+  releaseDate    DateTime?
+  endDate        DateTime?
+  runtimeMinutes Float?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  imageUrl       String?
+
+  // Technical debt: This will always be the same name, although might change in type
+  cursor DateTime @unique @updatedAt
+
+  MoviePublishType MoviePublishType[]
+  MovieGenre       MovieGenre[]
+  MoviePrincipal   MoviePrincipal[]
+  MovieKeyword     MovieKeyword[]
+  MovieReview      MovieReview[]
+}
+
+// represents an actor or director,...
+model MovieAssociate {
+  id        String    @id @default(cuid())
+  name      String
+  brief     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  birthday  DateTime?
+  deathday  DateTime?
+  imageUrl  String?
+
+  cursor DateTime @unique @updatedAt
+
+  MoviePrincipal                  MoviePrincipal[]
+  MovieAssociatePrimaryProfession MovieAssociatePrimaryProfession[]
+  AssociateKeywords               AssociateKeyword[]
+  AssociateReviews                AssociateReview[]
+}
+
+model MovieReview {
+  movie     Movie            @relation(fields: [movieId], references: [id])
+  reviewer  User             @relation(fields: [userId], references: [id])
+  content   String?          @db.Text
+  postivity ReviewPositivity
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  movieId String
+  userId  String
+
+  @@unique([movieId, userId])
+}
+
+model AssociateReview {
+  associate  MovieAssociate   @relation(fields: [movieAssociateId], references: [id])
+  reviewer   User             @relation(fields: [userId], references: [id])
+  content    String?          @db.Text
+  positivity ReviewPositivity
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  movieAssociateId String
+  userId           String
+
+  @@unique([movieAssociateId, userId])
+}
+
+// ---- Linking ----
+model MoviePublishType {
+  movie       Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  publishType String
+  movieId     String
+  createdAt   DateTime @default(now())
+
+  @@id([movieId, publishType])
+  @@unique([movieId, publishType])
+}
+
+model MovieGenre {
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  genre     String
+  createdAt DateTime @default(now())
+
+  movieId String
+
+  @@id([movieId, genre])
+  @@unique([movieId, genre])
+}
+
+// those who have significant contribution to the movie
+model MoviePrincipal {
+  movie     Movie          @relation(fields: [movieId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  person    MovieAssociate @relation(fields: [movieAssociateId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  crewType  String
+  job       String?
+  createdAt DateTime       @default(now())
+  udpatedAt DateTime       @updatedAt
+
+  movieId                 String
+  movieAssociateId        String
+  MoviePrincipalCharacter MoviePrincipalCharacter[]
+
+  @@unique([movieId, movieAssociateId])
+}
+
+model MovieAssociatePrimaryProfession {
+  associate  MovieAssociate @relation(fields: [movieAssociateId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  profession String
+  createdAt  DateTime       @default(now())
+
+  movieAssociateId String
+
+  @@unique([movieAssociateId, profession])
+}
+
+// In case the actor takes on many characters
+model MoviePrincipalCharacter {
+  moviePrincipal    MoviePrincipal @relation(fields: [moviePrincipalMovieId, moviePrincipalMovieAssociateId], references: [movieId, movieAssociateId], onUpdate: Cascade, onDelete: Cascade)
+  character         String
+  createdAt         DateTime       @default(now())
+  characterImageUrl String?
+
+  moviePrincipalMovieId          String
+  moviePrincipalMovieAssociateId String
+
+  @@unique([moviePrincipalMovieId, moviePrincipalMovieAssociateId])
+}
+
+model MovieKeyword {
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  keyword   String
+  createdAt DateTime @default(now())
+
+  movieId String
+
+  @@unique([movieId, keyword])
+}
+
+model AssociateKeyword {
+  assosciate MovieAssociate @relation(fields: [movieAssociateId], references: [id])
+  keyword    String
+  createdAt  DateTime       @default(now())
+
+  movieAssociateId String
+
+  @@unique([movieAssociateId, createdAt])
+}
+
+enum ReviewPositivity {
+  Upvote
+  Downvote
+  Neutral
 }

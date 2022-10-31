@@ -13,5 +13,11 @@ const config = {
     locales: ["en"],
     defaultLocale: "en",
   },
+  images: {
+    domains: [
+      'lh3.googleusercontent.com',
+      'cloudfront.net'
+    ]
+  }
 };
 export default config;
