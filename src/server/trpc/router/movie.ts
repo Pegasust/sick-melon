@@ -15,7 +15,7 @@ const detailedFieldSelector = {
 export const movieRouter = router({
     publicFeed: publicProcedure.input(z.object({
         cursor: z.date().nullish(),
-        take: z.number().min(1).max(50).default(20),
+        take: z.number().min(1).max(50).default(3),
     })).query(async ({ input, ctx }) => {
         return await ctx.prisma.movie.findMany({
             orderBy: [{
@@ -26,9 +26,12 @@ export const movieRouter = router({
             } : undefined,
             take: input.take + 1,// take the next element for the cursor value
         }).then(retval => {
-            const last = retval[retval.length - 1];
-            const nextCursor = last?.cursor;
-            return { data: retval, nextCursor }
+            const hasNext = retval.length == input.take + 1;
+            const nextCursor = retval[retval.length - 1]?.cursor;
+            if (hasNext) {
+                retval.pop();
+            }
+            return { data: retval, nextCursor, hasNext }
         })
     }),
     get: publicProcedure.input(z.object({

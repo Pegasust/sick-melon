@@ -27,7 +27,7 @@ export const NavbarLayout: React.FC<{ actions?: ReactNode, children?: ReactNode 
             </div>}
     </div>
     const Navbar = () => <div className="w-full mx-auto flex flex-row h-12 border align-middle
-        justify-between sticky top-0 z-10">
+        justify-between sticky top-0 z-10 bg-white">
         <div className="flex-grow w-full h-full flex items-center">
             <div className="w-full max-w-screen-xl mx-auto flex justify-between items-center gap-4">
                 {/*logo*/}
