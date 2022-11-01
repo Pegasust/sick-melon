@@ -64,92 +64,20 @@ export const MovieForm = z.object({
   originalTitle: form.originalTitle ?? form.primaryTitle,
 }));
 
-const _MovieFormZormless: React.FC<{ visible?: boolean, movieId?: string }> = ({ visible, movieId }) => {
-  const utils = trpc.useContext();
-  const upsertMovie = trpc.movie.upsert.useMutation({
-    onSuccess(data, variables) {
-      utils.movie.get.invalidate({ movieId: data.id });
-      // TODO: Since we use the cursor as the last element, need to store
-      // the cursor and invalidate it here
-      utils.movie.publicFeed.invalidate()
-      console.log("invalidated")
-    }
-  });
-  const _visible = visible ?? true;
-  const movie = trpc.movie.get.useQuery({ movieId: movieId as string }, { enabled: !!movieId });
 
-  const _handler: FormEventHandler<HTMLFormElement> = (e) => {
-    e.preventDefault();
-    // unpack form data (all strings I believe)
-    const formData = new FormData(e.currentTarget);
-    const rawFormStruct: Record<string, FormDataEntryValue> = {}
-    for (const [key, value] of formData) {
-      // TODO: What happens if this is a file?
-      rawFormStruct[key] = value;
-    }
-    console.log("raw form:", rawFormStruct);
-
-    // perform validation
-    const formStruct = MovieForm.safeParse(rawFormStruct);
-    if (!formStruct.success) {
-      // unpack error somehow
-      console.error("Error validating submitted form", formStruct.error.toString())
-      // TODO: mark the errors from here formStruct.error.formErrors.fieldErrors.
-      return false;
-    }
-    console.log("Ok on parsing", formStruct.data);
-    const trpcValidate = MovieForm.safeParse(formStruct.data);
-    if (!trpcValidate.success) {
-      console.error("MovieForm not idempotent, unfit to pass to tRPC", trpcValidate.error.toString());
-      return false;
-    }
-    console.log("Ok after validation");
-    upsertMovie.mutate({
-      movieId: movieId,
-      updateForm: formStruct.data
-    })
-    return false;
-  }
-  return <form onSubmit={_handler} className={_visible ? "" : " hidden"}>
-
-    <div>
-      <label>Primary title</label>
-      <input name="primaryTitle" />
-    </div>
-
-    <div>
-      <label>Original title</label>
-      <input name="originalTitle" />
-    </div>
-
-    <div>
-      <label>Brief</label>
-      <textarea name="brief" />
-    </div>
-
-    <div>
-      <label>Release date</label>
-      <input type="date" name="releaseDate" />
-    </div>
-
-    <div>
-      <label>End date</label>
-      <input type="date" name="endDate" />
-    </div>
-    <input type="submit" />
-
-
-  </form>
-}
-
-const _MovieForm: React.FC<{ visible?: boolean, movieId?: string }> = ({ visible, movieId }) => {
+const _MovieForm: React.FC<{ 
+  visible: boolean, 
+  setVisible: (v: boolean)=>unknown, 
+  movieId?: string 
+}> = ({ visible, setVisible, movieId }) => {
   const utils = trpc.useContext();
   const upsertMovie = trpc.movie.upsert.useMutation({
     onSuccess(data, variables) {
       utils.movie.get.invalidate({ movieId: data.id })
+      utils.movie.publicFeed.invalidate()
     }
   });
-  const _visible = visible ?? true;
+  const _visible = visible;
   const movie = trpc.movie.get.useQuery({ movieId: movieId as string }, { enabled: !!movieId });
   const zorm = useZorm("movie form", MovieForm, {
     onValidSubmit(e) {
@@ -167,30 +95,50 @@ const _MovieForm: React.FC<{ visible?: boolean, movieId?: string }> = ({ visible
     return <span className="text-red-400">{message}</span>
   }
 
+  const defaultValues = movie.data;
+
+  const form_cva = cva([
+    "w-screen", "h-screen", "absolute", "top-1/2", "left-1/2",
+    "-translate-x-1/2", "-translate-y-1/2", "flex",
+  ], {
+    variants: {
+      visibility: {
+        visible: [],
+        hidden: ["hidden"]
+      }
+    },
+    defaultVariants: {
+      visibility: "hidden"
+    }
+  })
   return <form ref={zorm.ref}
-    className={"w-screen h-screen absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex border rounded-md" +
-      (_visible ? "" : " hidden")}>
+    className={form_cva({ visibility: (_visible ? "visible" : "hidden") })}>
     <div className="z-20 w-full h-full bg-black/30 flex items-center justify-center">
-      <div className="p-4 bg-white flex flex-col items-start">
+      <div className="relative p-4 bg-white flex flex-col items-start">
+
+        <div className="group absolute top-1 right-1 text-center hover:cursor-pointer w-6 h-6 bg-red-200"
+          onClick={()=>{setVisible(false)}}>
+          <span className="text-white font-semibold">X</span>
+        </div>
 
         <div className="flex flex-col rounded-md">
           <label htmlFor={zorm.fields.primaryTitle()}>Primary title</label>
           <input className={cva_input_text({ hasError: zorm.errors.primaryTitle("errored") })}
-            name={zorm.fields.primaryTitle()} />
+            name={zorm.fields.primaryTitle()} defaultValue={defaultValues?.primaryTitle} />
           {zorm.errors.primaryTitle(e => <ErrorMessage message={e.message} />)}
         </div>
 
         <div className="flex flex-col rounded-md">
           <label htmlFor={zorm.fields.originalTitle()}>Original title</label>
           <input className={cva_input_text({ hasError: zorm.errors.originalTitle("errored") })}
-            name={zorm.fields.originalTitle()} />
+            name={zorm.fields.originalTitle()} defaultValue={defaultValues?.originalTitle} />
           {zorm.errors.originalTitle(e => <ErrorMessage message={e.message} />)}
         </div>
 
         <div className="flex flex-col rounded-md">
           <label htmlFor={zorm.fields.brief()}>Brief</label>
           <textarea className={cva_input_text({ hasError: zorm.errors.brief("errored") })}
-            name={zorm.fields.brief()} />
+            name={zorm.fields.brief()} defaultValue={defaultValues?.brief ?? undefined} />
           {zorm.errors.brief(e => <ErrorMessage message={e.message} />)}
         </div>
 
@@ -198,7 +146,7 @@ const _MovieForm: React.FC<{ visible?: boolean, movieId?: string }> = ({ visible
         <div className="flex flex-col rounded-md">
           <label htmlFor={zorm.fields.releaseDate()}>Release date</label>
           <input type="date" className={cva_input_text({ hasError: zorm.errors.releaseDate("errored") })}
-            name={zorm.fields.releaseDate()} />
+            name={zorm.fields.releaseDate()} defaultValue={defaultValues?.releaseDate?.toDateString() ?? undefined} />
           {zorm.errors.releaseDate(e => <ErrorMessage message={e.message} />)}
         </div>
 
@@ -279,7 +227,7 @@ const Home: NextPage = () => {
       </div>
       <span className="text-md group-hover:text-lg duration-200 h-14 items-center flex text-center">
         {movie.primaryTitle} {`${!movie.releaseDate ? "" :
-          movie.releaseDate.getFullYear()}`}
+          `(${movie.releaseDate.getFullYear()})`}`}
       </span>
     </div>
   }
@@ -310,13 +258,13 @@ const Home: NextPage = () => {
             <button className="rounded-md px-2 py-1 disabled:opacity-25 border bg-pink-200"
               onClick={() => moviesFetchNext()}
               disabled={!hasNextPage || moviesFetchingNext}>
-              {!hasNextPage ? "No more" : moviesFetchingNext? "Fetching": "Load more"}
+              {!hasNextPage ? "No more" : moviesFetchingNext ? "Fetching" : "Load more"}
             </button>
           </div>
         </div>
       </div>
     </NavbarLayout>
-    <_MovieFormZormless visible={movieFormVisible} />
+    <_MovieForm visible={movieFormVisible} setVisible={setMovieFormVisible} />
   </MelonBackground>
 }
 
