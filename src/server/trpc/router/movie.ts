@@ -1,16 +1,9 @@
 import { protectedProcedure, router } from "@server/trpc/trpc";
 import { z } from "zod";
 import { publicProcedure } from "@server/trpc/trpc";
-import assert from "assert";
-import { MovieForm } from "@pages/index";
+import { MovieMutationForm } from "@pages/index";
 
-const listFieldSelector = {
 
-}
-
-const detailedFieldSelector = {
-
-}
 
 export const movieRouter = router({
     publicFeed: publicProcedure.input(z.object({
@@ -43,7 +36,7 @@ export const movieRouter = router({
     }),
     upsert: protectedProcedure.input(z.object({
         movieId: z.string().optional(),
-        updateForm: MovieForm
+        updateForm: MovieMutationForm
     })).mutation(async ({ input, ctx }) => {
         const prisma_data = {
             originalTitle: input.updateForm.originalTitle,

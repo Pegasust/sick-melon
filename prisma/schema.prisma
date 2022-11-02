@@ -53,6 +53,7 @@ model User {
   sessions       Session[]
   MovieReview    MovieReview[]
   AssociateRevie AssociateReview[]
+  UserImage      UserImage[]
 }
 
 model VerificationToken {
@@ -133,6 +134,17 @@ model AssociateReview {
   userId           String
 
   @@unique([movieAssociateId, userId])
+}
+
+model UserImage {
+  user             User   @relation(fields: [userId], references: [id])
+  imageUrl         String
+  imageDisplayName String
+  namespace        String
+
+  userId String
+
+  @@id([userId, imageUrl])
 }
 
 // ---- Linking ----

@@ -16,7 +16,8 @@ const config = {
   images: {
     domains: [
       'lh3.googleusercontent.com',
-      'cloudfront.net'
+      'cloudfront.net',
+      'freeimage.host'
     ]
   }
 };

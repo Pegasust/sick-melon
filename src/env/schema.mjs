@@ -18,6 +18,7 @@ export const serverSchema = z.object({
   ),
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
+  FREEIMAGE_API_KEY: z.string(),
 });
 
 /**
@@ -26,7 +27,8 @@ export const serverSchema = z.object({
  * To expose them to the client, prefix them with `NEXT_PUBLIC_`.
  */
 export const clientSchema = z.object({
-  // NEXT_PUBLIC_BAR: z.string(),
+  // Looks like free image host generates the same API regardless of host
+  NEXT_PUBLIC_FREEIMAGE_HOST_API: z.string(),
 });
 
 /**
@@ -35,6 +37,9 @@ export const clientSchema = z.object({
  * and only used environment variables are included in the build.
  * @type {{ [k in keyof z.infer<typeof clientSchema>]: z.infer<typeof clientSchema>[k] | undefined }}
  */
-export const clientEnv = {
-  // NEXT_PUBLIC_BAR: process.env.NEXT_PUBLIC_BAR,
+const _clientEnv = {
+  NEXT_PUBLIC_FREEIMAGE_HOST_API: process.env.NEXT_PUBLIC_FREEIMAGE_HOST_API,
 };
+
+export const clientEnv = clientSchema.parse(_clientEnv);
+
